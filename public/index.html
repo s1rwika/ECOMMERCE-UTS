@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!-- <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -169,4 +169,203 @@
   <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.10.2/dist/umd/popper.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.min.js"></script>
 </body>
+</html> -->
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Product Manager</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    .card-img-top {
+      object-fit: cover;
+      height: 200px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container mt-5">
+    <h1 class="text-center mb-4">Daftar Produk</h1>
+
+    <!-- Refresh Button -->
+    <div class="text-center mb-4">
+      <button class="btn btn-primary" onclick="loadProducts()">Refresh Produk</button>
+    </div>
+
+    <!-- Product List -->
+    <div id="productList" class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4"></div>
+
+    <!-- Add Product Section -->
+    <div class="mt-5">
+      <h2 class="mb-3">Tambah Produk</h2>
+      <form id="addProductForm" enctype="multipart/form-data" class="row g-3">
+        <div class="col-12">
+          <label for="productName" class="form-label">Nama Produk</label>
+          <input type="text" id="productName" name="name" class="form-control" required>
+        </div>
+
+        <div class="col-12">
+          <label for="productPrice" class="form-label">Harga Produk</label>
+          <input type="number" id="productPrice" name="price" class="form-control" required>
+        </div>
+
+        <div class="col-12">
+          <label for="productImage" class="form-label">Pilih Gambar Produk</label>
+          <input type="file" id="productImage" name="file" class="form-control" accept="image/*" required>
+        </div>
+
+        <div class="col-12">
+          <button type="submit" class="btn btn-success w-100">Tambah Produk</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    let products = [];
+
+    // Load all products from the backend
+    async function loadProducts() {
+      try {
+        const response = await fetch("http://52.65.176.248:50000/products");
+        products = await response.json();
+        displayProducts();
+      } catch (error) {
+        console.error("Gagal memuat produk:", error);
+        alert("Gagal memuat produk");
+      }
+    }
+
+    // Display all products in a list
+    function displayProducts() {
+      const productList = document.getElementById('productList');
+      productList.innerHTML = '';
+
+      products.forEach(product => {
+        const listItem = document.createElement('div');
+        listItem.classList.add('col');
+        listItem.innerHTML = `
+          <div class="card">
+            <img src="${product.image_url}" alt="${product.name}" class="card-img-top">
+            <div class="card-body">
+              <h5 class="card-title">${product.name}</h5>
+              <p class="card-text">Rp ${product.price}</p>
+              <div class="d-flex justify-content-between">
+                <button class="btn btn-warning" onclick="editProduct(${product.id})">Edit</button>
+                <button class="btn btn-danger" onclick="deleteProduct(${product.id})">Hapus</button>
+              </div>
+            </div>
+          </div>
+        `;
+        productList.appendChild(listItem);
+      });
+    }
+
+    // Edit product details
+    async function editProduct(productId) {
+      const product = products.find(p => p.id === productId);
+      if (!product) {
+        alert("Produk tidak ditemukan!");
+        return;
+      }
+
+      const newName = prompt("Masukkan nama produk baru:", product.name);
+      if (newName === null) return; // cancel
+      const newPrice = prompt("Masukkan harga produk baru:", product.price);
+      if (newPrice === null) return; // cancel
+
+      const updatedProduct = {
+        name: newName,
+        price: parseInt(newPrice),
+        image_key: product.image_key // keep the same image key
+      };
+
+      try {
+        const response = await fetch(`http://52.65.176.248:50000/products-update/${productId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updatedProduct)
+        });
+        const result = await response.json();
+        if (response.ok) {
+          alert("Produk berhasil diperbarui!");
+          loadProducts();
+        } else {
+          alert("Gagal memperbarui produk: " + (result.error || ""));
+        }
+      } catch (error) {
+        console.error("Error saat memperbarui produk:", error);
+        alert("Gagal memperbarui produk.");
+      }
+    }
+
+    // Delete product
+    async function deleteProduct(productId) {
+      if (!confirm("Apakah Anda yakin ingin menghapus produk ini?")) return;
+
+      try {
+        const response = await fetch(`http://52.65.176.248:50000/products-delete/${productId}`, {
+          method: 'DELETE'
+        });
+
+        const result = await response.json();
+        if (response.ok) {
+          alert("Produk berhasil dihapus!");
+          loadProducts();
+        } else {
+          alert("Gagal menghapus produk: " + (result.error || ""));
+        }
+      } catch (error) {
+        console.error("Error saat menghapus produk:", error);
+        alert("Gagal menghapus produk.");
+      }
+    }
+
+    // Handle product addition
+    document.getElementById('addProductForm').addEventListener('submit', async function (event) {
+        event.preventDefault();
+
+        const name = document.getElementById('productName').value;
+        const price = document.getElementById('productPrice').value;
+        const imageFile = document.getElementById('productImage').files[0];
+
+        if (!imageFile || !name || !price) {
+            alert("Pastikan semua field terisi dengan benar!");
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append("name", name);
+        formData.append("price", price);
+        formData.append("file", imageFile);
+
+        try {
+            const response = await fetch("http://52.65.176.248:50000/upload-add", {
+            method: "POST",
+            body: formData
+            });
+
+            const result = await response.json();
+            if (response.ok) {
+            alert("Produk berhasil ditambahkan!");
+            loadProducts();  // Fungsi untuk memuat produk terbaru
+            } else {
+            alert("Gagal menambahkan produk: " + result.error);
+            }
+        } catch (error) {
+            console.error("Gagal menambahkan produk:", error);
+            alert("Gagal menambahkan produk.");
+        }
+    });
+
+    // Load products on page load
+    loadProducts();
+  </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.10.2/dist/umd/popper.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.min.js"></script>
+</body>
 </html>
+
