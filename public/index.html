@@ -1,298 +1,151 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin Produk E-Commerce</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
-  <style>
-    .product-card { transition: all 0.3s ease; }
-    .product-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
-    .form-section { background: #f8f9fa; border-radius: 10px; padding: 25px; margin-bottom: 30px; }
-    .img-thumbnail { max-height: 150px; object-fit: contain; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-commerce Website</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            width: 80%;
+            margin: 0 auto;
+        }
+        .product {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+        }
+        .product-item {
+            width: 30%;
+            margin: 20px 0;
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: center;
+        }
+        .product-item img {
+            width: 100%;
+            height: auto;
+        }
+        .add-product {
+            margin: 20px 0;
+        }
+        .add-product input, .add-product button {
+            padding: 10px;
+            margin: 5px;
+        }
+    </style>
 </head>
-<body class="bg-light">
-  <div class="container py-5">
-    <h1 class="text-center mb-5">Admin Panel Produk</h1>
-    
-    <!-- Form Tambah Produk -->
-    <div class="form-section">
-      <h3><i class="bi bi-plus-circle"></i> Tambah Produk Baru</h3>
-      <form id="productForm" class="row g-3">
-        <div class="col-md-4">
-          <label for="productName" class="form-label">Nama Produk</label>
-          <input type="text" class="form-control" id="productName" required>
-        </div>
-        <div class="col-md-3">
-          <label for="productPrice" class="form-label">Harga (Rp)</label>
-          <input type="number" class="form-control" id="productPrice" min="0" required>
-        </div>
-        <div class="col-md-3">
-          <label for="productImage" class="form-label">Gambar Produk</label>
-          <input type="file" class="form-control" id="productImage" accept="image/*" required>
-        </div>
-        <div class="col-md-2 d-flex align-items-end">
-          <button type="submit" class="btn btn-primary w-100">
-            <i class="bi bi-save"></i> Simpan
-          </button>
-        </div>
-      </form>
-      <div id="formStatus" class="mt-3"></div>
+<body>
+
+<div class="container">
+    <h1>E-commerce Website</h1>
+
+    <!-- Section for displaying products -->
+    <div id="products" class="product">
+        <!-- Products will be dynamically added here -->
     </div>
 
-    <!-- Daftar Produk -->
-    <div class="card shadow-sm">
-      <div class="card-header bg-white">
-        <h3 class="mb-0"><i class="bi bi-list-ul"></i> Daftar Produk</h3>
-      </div>
-      <div class="card-body">
-        <div id="loadingIndicator" class="text-center py-4">
-          <div class="spinner-border text-primary" role="status">
-            <span class="visually-hidden">Loading...</span>
-          </div>
-        </div>
-        <div id="productList" class="row g-4"></div>
-      </div>
+    <!-- Section for adding new product -->
+    <div class="add-product">
+        <h2>Tambah Produk Baru</h2>
+        <input type="text" id="product-name" placeholder="Nama Produk" />
+        <input type="number" id="product-price" placeholder="Harga Produk" />
+        <input type="file" id="product-image" />
+        <button onclick="uploadProduct()">Tambah Produk</button>
     </div>
+</div>
 
-    <!-- Modal Edit Produk -->
-    <div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
-      <div class="modal-dialog">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title">Edit Produk</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-          </div>
-          <div class="modal-body">
-            <form id="editForm">
-              <input type="hidden" id="editId">
-              <div class="mb-3">
-                <label for="editName" class="form-label">Nama Produk</label>
-                <input type="text" class="form-control" id="editName" required>
-              </div>
-              <div class="mb-3">
-                <label for="editPrice" class="form-label">Harga</label>
-                <input type="number" class="form-control" id="editPrice" min="0" required>
-              </div>
-              <div class="mb-3">
-                <label for="editImage" class="form-label">Gambar Baru (Opsional)</label>
-                <input type="file" class="form-control" id="editImage" accept="image/*">
-                <small class="text-muted">Kosongkan jika tidak ingin mengubah gambar</small>
-              </div>
-              <div class="mb-3">
-                <label class="form-label">Gambar Saat Ini</label>
-                <img id="currentImage" class="img-thumbnail d-block" src="" alt="Current Image">
-              </div>
-            </form>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-            <button type="button" class="btn btn-primary" onclick="updateProduct()">Simpan Perubahan</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+<script>
+    // URL dari server backend Anda
+    const API_URL = 'http://localhost:50000';
 
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-  <script>
-    const API_BASE_URL = 'http://52.65.176.248:50000';
-    let editModal = new bootstrap.Modal(document.getElementById('editModal'));
+    // Fungsi untuk mengambil dan menampilkan produk dari database
+    async function fetchProducts() {
+        try {
+            const response = await fetch(`${API_URL}/products`);
+            const products = await response.json();
+            const productsContainer = document.getElementById('products');
+            productsContainer.innerHTML = '';
 
-    // Memuat produk saat halaman dimuat
-    document.addEventListener('DOMContentLoaded', loadProducts);
-
-    // Handle form tambah produk
-    document.getElementById('productForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      
-      const name = document.getElementById('productName').value;
-      const price = document.getElementById('productPrice').value;
-      const imageFile = document.getElementById('productImage').files[0];
-      const statusDiv = document.getElementById('formStatus');
-
-      if (!name || !price || !imageFile) {
-        showAlert('warning', 'Harap isi semua field!', statusDiv);
-        return;
-      }
-
-      const formData = new FormData();
-      formData.append('name', name);
-      formData.append('price', price);
-      formData.append('image', imageFile);
-
-      try {
-        showAlert('info', 'Menyimpan produk...', statusDiv);
-        
-        const response = await fetch(`${API_BASE_URL}/upload-add`, {
-          method: 'POST',
-          body: formData
-        });
-        
-        const result = await response.json();
-        
-        if (response.ok) {
-          showAlert('success', `Produk berhasil ditambahkan! <a href="${result.url}" target="_blank">Lihat Gambar</a>`, statusDiv);
-          document.getElementById('productForm').reset();
-          loadProducts();
-        } else {
-          throw new Error(result.error || 'Gagal menyimpan');
+            products.forEach(product => {
+                const productItem = document.createElement('div');
+                productItem.classList.add('product-item');
+                productItem.innerHTML = `
+                    <img src="${product.image_url}" alt="${product.name}">
+                    <h3>${product.name}</h3>
+                    <p>Harga: Rp ${product.price}</p>
+                    <button onclick="deleteProduct(${product.id})">Hapus Produk</button>
+                `;
+                productsContainer.appendChild(productItem);
+            });
+        } catch (err) {
+            console.error('Gagal mengambil produk:', err);
         }
-      } catch (error) {
-        console.error('Error:', error);
-        showAlert('danger', `Gagal menyimpan produk: ${error.message}`, statusDiv);
-      }
-    });
-
-    // Fungsi untuk memuat daftar produk
-    async function loadProducts() {
-      const productList = document.getElementById('productList');
-      const loadingIndicator = document.getElementById('loadingIndicator');
-      
-      productList.innerHTML = '';
-      loadingIndicator.style.display = 'block';
-      
-      try {
-        const response = await fetch(`${API_BASE_URL}/products`);
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error('Error response:', errorText);
-            throw new Error('Server returned an error');
-        }
-        const products = await response.json();
-        
-        if (products.length === 0) {
-          productList.innerHTML = `
-            <div class="col-12">
-              <div class="alert alert-info">Belum ada produk.</div>
-            </div>
-          `;
-          return;
-        }
-        
-        productList.innerHTML = products.map(product => `
-          <div class="col-md-4" id="product-${product.id}">
-            <div class="card product-card h-100">
-              <img src="${product.image_url}" class="card-img-top p-3" style="height: 200px; object-fit: contain;">
-              <div class="card-body">
-                <h5 class="card-title">${product.name}</h5>
-                <p class="card-text text-success fw-bold">Rp${parseInt(product.price).toLocaleString()}</p>
-                <small class="text-muted">ID: ${product.id}</small>
-              </div>
-              <div class="card-footer bg-white">
-                <button class="btn btn-sm btn-warning me-2" onclick="openEditModal(${product.id}, '${product.name}', ${product.price}, '${product.image_url}')">
-                  <i class="bi bi-pencil"></i> Edit
-                </button>
-                <button class="btn btn-sm btn-danger" onclick="deleteProduct(${product.id})">
-                  <i class="bi bi-trash"></i> Hapus
-                </button>
-              </div>
-            </div>
-          </div>
-        `).join('');
-        
-      } catch (error) {
-        console.error('Error:', error);
-        productList.innerHTML = `
-          <div class="col-12">
-            <div class="alert alert-danger">Gagal memuat produk. Cek koneksi atau console untuk detail.</div>
-          </div>
-        `;
-      } finally {
-        loadingIndicator.style.display = 'none';
-      }
     }
 
-    // Fungsi untuk membuka modal edit
-    function openEditModal(id, name, price, imageUrl) {
-      document.getElementById('editId').value = id;
-      document.getElementById('editName').value = name;
-      document.getElementById('editPrice').value = price;
-      document.getElementById('currentImage').src = imageUrl;
-      editModal.show();
-    }
+    // Fungsi untuk mengunggah produk baru
+    async function uploadProduct() {
+        const name = document.getElementById('product-name').value;
+        const price = document.getElementById('product-price').value;
+        const file = document.getElementById('product-image').files[0];
 
-    // Fungsi untuk update produk
-    async function updateProduct() {
-      const id = document.getElementById('editId').value;
-      const name = document.getElementById('editName').value;
-      const price = document.getElementById('editPrice').value;
-      const imageFile = document.getElementById('editImage').files[0];
-      
-      try {
-        let image_key = null;
-        
-        // Jika ada file gambar baru, upload dulu
-        if (imageFile) {
-          const uploadFormData = new FormData();
-          uploadFormData.append('file', imageFile);
-          
-          const uploadResponse = await fetch(`${API_BASE_URL}/upload-add`, {
-            method: 'POST',
-            body: uploadFormData
-          });
-          
-          const uploadResult = await uploadResponse.json();
-          image_key = uploadResult.url.split('/').pop();
+        if (!name || !price || !file) {
+            alert('Harap lengkapi semua data!');
+            return;
         }
-        
-        // Update data produk
-        const updateData = { name, price };
-        if (image_key) updateData.image_key = image_key;
-        
-        const response = await fetch(`${API_BASE_URL}/products-update/${id}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(updateData)
-        });
-        
-        if (response.ok) {
-          showAlert('success', 'Produk berhasil diperbarui!', document.getElementById('formStatus'));
-          editModal.hide();
-          loadProducts();
-        } else {
-          throw new Error('Gagal memperbarui produk');
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const uploadResponse = await fetch(`${API_URL}/upload-add`, {
+                method: 'POST',
+                body: formData
+            });
+            const uploadResult = await uploadResponse.json();
+
+            if (uploadResult.message) {
+                const newProduct = {
+                    name: name,
+                    price: price,
+                    image_key: file.name,
+                };
+
+                await fetch(`${API_URL}/products-add`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(newProduct),
+                });
+
+                alert('Produk berhasil ditambahkan');
+                fetchProducts();
+            }
+        } catch (err) {
+            console.error('Gagal mengunggah produk:', err);
         }
-      } catch (error) {
-        console.error('Error:', error);
-        showAlert('danger', `Gagal memperbarui produk: ${error.message}`, document.getElementById('formStatus'));
-      }
     }
 
     // Fungsi untuk menghapus produk
-    async function deleteProduct(id) {
-      if (!confirm(`Apakah Anda yakin ingin menghapus produk dengan ID ${id}?`)) return;
-      
-      try {
-        const response = await fetch(`${API_BASE_URL}/products-delete/${id}`, {
-          method: 'DELETE'
-        });
-        
-        if (response.ok) {
-          showAlert('success', 'Produk berhasil dihapus!', document.getElementById('formStatus'));
-          loadProducts();
-        } else {
-          throw new Error('Gagal menghapus produk');
+    async function deleteProduct(productId) {
+        try {
+            const deleteResponse = await fetch(`${API_URL}/products-delete/${productId}`, {
+                method: 'DELETE',
+            });
+            const deleteResult = await deleteResponse.json();
+            alert(deleteResult.message);
+            fetchProducts();
+        } catch (err) {
+            console.error('Gagal menghapus produk:', err);
         }
-      } catch (error) {
-        console.error('Error:', error);
-        showAlert('danger', `Gagal menghapus produk: ${error.message}`, document.getElementById('formStatus'));
-      }
     }
 
-    // Helper function untuk menampilkan alert
-    function showAlert(type, message, container) {
-      container.innerHTML = `
-        <div class="alert alert-${type} alert-dismissible fade show">
-          ${message}
-          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-      `;
-    }
-  </script>
+    // Inisialisasi halaman dengan mengambil produk saat pertama kali dimuat
+    fetchProducts();
+</script>
+
 </body>
 </html>
