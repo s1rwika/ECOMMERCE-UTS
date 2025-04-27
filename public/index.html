@@ -166,7 +166,7 @@
   </div>
 
   <!-- Edit Product Modal -->
-  <div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
       <div class="modal-content">
         <div class="modal-header">
@@ -207,6 +207,7 @@
       </div>
     </div>
   </div>
+  
 
   <!-- Success Toast -->
   <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
@@ -328,60 +329,82 @@
     });
 
     // Open edit modal
-    function openEditModal(id, name, price, imageUrl) {
-      document.getElementById('editId').value = id;
-      document.getElementById('editName').value = name;
-      document.getElementById('editPrice').value = price;
-      document.getElementById('currentImage').src = imageUrl;
-      editModal.show();
+    // Fungsi untuk membuka modal edit dan menampilkan data produk yang dipilih
+    // Fungsi untuk membuka modal edit dan menampilkan data produk yang dipilih
+    function openEditModal(product) {
+    document.getElementById('editId').value = product.id;
+    document.getElementById('editName').value = product.name;
+    document.getElementById('editPrice').value = product.price;
+
+    // Menampilkan gambar saat ini jika ada
+    const currentImageElement = document.getElementById('currentImage');
+    if (product.image_url) {
+        currentImageElement.src = product.image_url;
+        currentImageElement.style.display = 'block';
+    } else {
+        currentImageElement.style.display = 'none';
     }
 
-    // Update product
+    // Menampilkan modal
+    var editModal = new bootstrap.Modal(document.getElementById('editModal'));
+    editModal.show();
+    }
+
+    // Fungsi untuk memperbarui produk
     async function updateProduct() {
-      const id = document.getElementById('editId').value;
-      const name = document.getElementById('editName').value;
-      const price = document.getElementById('editPrice').value;
-      const imageFile = document.getElementById('editImage').files[0];
-      
-      try {
+    const id = document.getElementById('editId').value;
+    const name = document.getElementById('editName').value;
+    const price = document.getElementById('editPrice').value;
+    const imageFile = document.getElementById('editImage').files[0];
+    
+    try {
         let image_key = null;
-        
-        // If new image is uploaded
+
+        // Jika ada gambar baru yang diunggah
         if (imageFile) {
-          const uploadFormData = new FormData();
-          uploadFormData.append('file', imageFile);
-          
-          const uploadResponse = await fetch(`${API_BASE_URL}/upload-add`, {
+        const uploadFormData = new FormData();
+        uploadFormData.append('file', imageFile);
+        
+        const uploadResponse = await fetch(`${API_BASE_URL}/upload-add`, {
             method: 'POST',
             body: uploadFormData
-          });
-          
-          const uploadResult = await uploadResponse.json();
-          image_key = uploadResult.url.split('/').pop();
+        });
+
+        // Pastikan upload berhasil
+        if (!uploadResponse.ok) {
+            throw new Error('Gagal mengunggah gambar');
+        }
+
+        const uploadResult = await uploadResponse.json();
+        image_key = uploadResult.url.split('/').pop();
         }
         
-        // Prepare update data
+        // Siapkan data yang akan diupdate
         const updateData = { name, price };
         if (image_key) updateData.image_key = image_key;
         
         const response = await fetch(`${API_BASE_URL}/products-update/${id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(updateData)
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updateData)
         });
-        
+
+        // Jika update berhasil
         if (response.ok) {
-          showToast('Produk berhasil diperbarui!');
-          editModal.hide();
-          loadProducts();
+        showToast('Produk berhasil diperbarui!');
+        // Tutup modal dan reload data produk
+        var editModal = bootstrap.Modal.getInstance(document.getElementById('editModal'));
+        editModal.hide();
+        loadProducts();
         } else {
-          throw new Error('Gagal memperbarui produk');
+        throw new Error('Gagal memperbarui produk');
         }
-      } catch (error) {
+    } catch (error) {
         console.error("Error:", error);
         showAlert('danger', `Gagal memperbarui produk: ${error.message}`, 'formStatus');
-      }
     }
+    }
+
 
     // Delete product
     async function deleteProduct(id) {
