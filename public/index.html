@@ -46,7 +46,7 @@
     // Ambil data produk dari backend
     async function loadProducts() {
       try {
-        const response = await fetch('http://52.65.176.248:50000/products');
+        const response = await fetch('http://52.65.176.248:50000/files'); // Update URL untuk mendapatkan file
         const products = await response.json();
         
         const container = document.getElementById('productList');
@@ -58,11 +58,10 @@
         container.innerHTML = products.map(product => `
           <div class="col-md-4">
             <div class="card product-card h-100">
-              <img src="${product.image_url}" class="card-img-top" style="height: 200px; object-fit: cover;">
+              <img src="${product.url}" class="card-img-top" style="height: 200px; object-fit: cover;">
               <div class="card-body">
-                <h5 class="card-title">${product.name}</h5>
-                <p class="card-text text-success fw-bold">Rp${product.price.toLocaleString()}</p>
-                <small class="text-muted">Ditambahkan: ${new Date(product.created_at).toLocaleString()}</small>
+                <h5 class="card-title">${product.fileName}</h5>
+                <p class="card-text text-success fw-bold">Harga produk tidak tersedia di endpoint S3.</p>
               </div>
             </div>
           </div>
@@ -103,11 +102,11 @@
 
         const uploadResult = await uploadResponse.json();
         if (uploadResponse.ok) {
-          // Setelah berhasil upload gambar, tambah produk ke database
+          // Setelah berhasil upload gambar, tambah produk ke database dengan URL gambar S3
           const productData = {
             name: name,
             price: price,
-            image_key: imageFile.name
+            imageUrl: uploadResult.url // Gunakan URL yang didapat dari upload
           };
 
           const response = await fetch('http://52.65.176.248:50000/products-add', {
@@ -126,7 +125,7 @@
               </div>
             `;
             document.getElementById('productForm').reset();
-            loadProducts(); // Refresh daftar
+            loadProducts(); // Refresh daftar produk
           } else {
             throw new Error(result.message || 'Gagal menyimpan');
           }
