@@ -23,11 +23,11 @@ jobs:
           ssh -o StrictHostKeyChecking=no \
               ec2-user@3.107.164.86 << 'EOF'
           set -e
-          cd /usr/share/nginx/html
+          cd /var/www/html  # Ganti dengan direktori yang sesuai dengan setupmu
           sudo git fetch origin
           sudo git reset --hard origin/main
-          sudo chown -R nginx:nginx /usr/share/nginx/html/
-          sudo chmod -R 755 /usr/share/nginx/html/
+          sudo chown -R ec2-user:nginx /var/www/html/  # Sesuaikan dengan user dan group yang digunakan
+          sudo chmod -R 775 /var/www/html/  # Sesuaikan dengan izin yang kamu inginkan
           sudo systemctl reload nginx
           echo "Deployment successful!"
           EOF
