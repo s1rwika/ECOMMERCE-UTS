@@ -336,59 +336,55 @@
       editModal.show();
     }
 
-    // Update product
+    // Update product - versi perbaikan
     async function updateProduct() {
-        const id = document.getElementById('editId').value;
-        const name = document.getElementById('editName').value;
-        const price = document.getElementById('editPrice').value;
-        const imageFile = document.getElementById('editImage').files[0];
-
-        try {
-            let image_key = null;
-
-            // Jika gambar baru diupload
-            if (imageFile) {
-                const uploadFormData = new FormData();
-                uploadFormData.append('file', imageFile);
-
-                const uploadResponse = await fetch(`${API_BASE_URL}/upload-add`, {
-                    method: 'POST',
-                    body: uploadFormData
-                });
-
-                const uploadResult = await uploadResponse.json();
-                if (!uploadResponse.ok) {
-                    throw new Error(uploadResult.error || 'Gagal mengupload gambar');
-                }
-
-                image_key = uploadResult.url.split('/').pop(); // Menyimpan key gambar
-            }
-
-            // Menyiapkan data untuk diperbarui
-            const updateData = { name, price };
-            if (image_key) {
-                updateData.image_key = image_key;  // Menambahkan image_key jika ada gambar baru
-            }
-
-            // Mengirim permintaan PUT untuk memperbarui produk
-            const response = await fetch(`${API_BASE_URL}/products-update/${id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(updateData)
-            });
-
-            if (response.ok) {
-                showToast('Produk berhasil diperbarui!');
-                editModal.hide();
-                loadProducts();
-            } else {
-                const result = await response.json();
-                throw new Error(result.error || 'Gagal memperbarui produk');
-            }
-        } catch (error) {
-            console.error("Error:", error);
-            showAlert('danger', `Gagal memperbarui produk: ${error.message}`, 'formStatus');
+    const id = document.getElementById('editId').value;
+    const name = document.getElementById('editName').value;
+    const price = document.getElementById('editPrice').value;
+    const imageFile = document.getElementById('editImage').files[0];
+    
+    try {
+        showAlert('info', 'Memperbarui produk...', 'formStatus');
+        
+        let updateData = { name, price };
+        
+        // If new image is uploaded
+        if (imageFile) {
+        const uploadFormData = new FormData();
+        uploadFormData.append('file', imageFile);
+        
+        const uploadResponse = await fetch(`${API_BASE_URL}/upload-add`, {
+            method: 'POST',
+            body: uploadFormData
+        });
+        
+        if (!uploadResponse.ok) {
+            throw new Error('Gagal mengunggah gambar baru');
         }
+        
+        const uploadResult = await uploadResponse.json();
+        updateData.image_url = uploadResult.url; // Asumsi backend mengembalikan 'url'
+        }
+        
+        const response = await fetch(`${API_BASE_URL}/products/${id}`, { // Perhatikan endpoint
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updateData)
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+        showToast('Produk berhasil diperbarui!');
+        editModal.hide();
+        loadProducts();
+        } else {
+        throw new Error(result.message || 'Gagal memperbarui produk');
+        }
+    } catch (error) {
+        console.error("Error:", error);
+        showAlert('danger', `Gagal memperbarui produk: ${error.message}`, 'formStatus');
+    }
     }
 
 
