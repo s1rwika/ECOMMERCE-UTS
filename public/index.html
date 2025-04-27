@@ -79,42 +79,40 @@
     }
 
     async function editProduct(productId) {
-      try {
-        const getResponse = await fetch(`${API_URL}/products/${productId}`);
-        const product = await getResponse.json();
+    const productName = prompt("Masukkan nama produk baru:");
+    const productPrice = prompt("Masukkan harga produk baru:");
+    
+    if (!productName || !productPrice) {
+        alert("Nama dan harga produk tidak boleh kosong!");
+        return;
+    }
 
-        if (!getResponse.ok) {
-          alert("Gagal mengambil data produk.");
-          return;
-        }
+    const updatedProduct = {
+        name: productName,
+        price: productPrice
+        // Tidak usah kirim image_key kalau tidak mau ganti gambar
+    };
 
-        const newName = prompt("Masukkan nama produk baru:", product.name) ?? product.name;
-        const newPrice = prompt("Masukkan harga produk baru:", product.price) ?? product.price;
-
-        const updatedProduct = {
-          name: newName.trim() || product.name,
-          price: newPrice.trim() || product.price,
-          image_key: product.image_key // Tetap pakai image lama
-        };
-
-        const updateResponse = await fetch(`${API_URL}/products-update/${productId}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(updatedProduct)
+    try {
+        const response = await fetch(`http://52.65.176.248:50000/products-update/${productId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedProduct)
         });
 
-        const result = await updateResponse.json();
-        if (updateResponse.ok) {
-          alert("Produk berhasil diperbarui!");
-          loadProducts();
+        const result = await response.json();   
+        if (response.ok) {
+        alert("Produk berhasil diperbarui!");
+        loadProducts(); // Refresh daftar produk
         } else {
-          alert("Gagal memperbarui produk: " + result.message);
+        alert("Gagal memperbarui produk: " + (result.message || ""));
         }
-      } catch (error) {
-        console.error("Error:", error);
+    } catch (error) {
+        console.error("Error saat memperbarui produk:", error);
         alert("Gagal memperbarui produk.");
-      }
     }
+    }
+
 
     async function deleteProduct(productId) {
       if (!confirm("Apakah Anda yakin ingin menghapus produk ini?")) return;
