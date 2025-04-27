@@ -1,151 +1,150 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>E-commerce Website</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-        }
-        .container {
-            width: 80%;
-            margin: 0 auto;
-        }
-        .product {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: space-between;
-        }
-        .product-item {
-            width: 30%;
-            margin: 20px 0;
-            border: 1px solid #ddd;
-            padding: 10px;
-            text-align: center;
-        }
-        .product-item img {
-            width: 100%;
-            height: auto;
-        }
-        .add-product {
-            margin: 20px 0;
-        }
-        .add-product input, .add-product button {
-            padding: 10px;
-            margin: 5px;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>E-Commerce</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    .product-card { transition: transform 0.3s; }
+    .product-card:hover { transform: scale(1.03); }
+    .form-section { background: #f8f9fa; border-radius: 8px; padding: 20px; margin-bottom: 30px; }
+  </style>
 </head>
 <body>
-
-<div class="container">
-    <h1>E-commerce Website</h1>
-
-    <!-- Section for displaying products -->
-    <div id="products" class="product">
-        <!-- Products will be dynamically added here -->
+  <div class="container py-5">
+    <h1 class="text-center mb-5">Admin Produk</h1>
+    
+    <!-- Form Input Produk Baru -->
+    <div class="form-section">
+      <h3>Tambah Produk Baru</h3>
+      <form id="productForm">
+        <div class="mb-3">
+          <label for="productName" class="form-label">Nama Produk</label>
+          <input type="text" class="form-control" id="productName" required>
+        </div>
+        <div class="mb-3">
+          <label for="productPrice" class="form-label">Harga (Rp)</label>
+          <input type="number" class="form-control" id="productPrice" min="0" required>
+        </div>
+        <div class="mb-3">
+          <label for="productImage" class="form-label">Gambar Produk</label>
+          <input type="file" class="form-control" id="productImage" accept="image/*" required>
+          <small class="text-muted">Format: JPG/PNG, Maks 2MB</small>
+        </div>
+        <button type="submit" class="btn btn-primary">Simpan Produk</button>
+      </form>
+      <div id="formStatus" class="mt-3"></div>
     </div>
 
-    <!-- Section for adding new product -->
-    <div class="add-product">
-        <h2>Tambah Produk Baru</h2>
-        <input type="text" id="product-name" placeholder="Nama Produk" />
-        <input type="number" id="product-price" placeholder="Harga Produk" />
-        <input type="file" id="product-image" />
-        <button onclick="uploadProduct()">Tambah Produk</button>
-    </div>
-</div>
+    <!-- Daftar Produk -->
+    <h3 class="mb-4">Daftar Produk</h3>
+    <div id="productList" class="row g-4"></div>
+  </div>
 
-<script>
-    // URL dari server backend Anda
-    const API_URL = 'http://localhost:50000';
-
-    // Fungsi untuk mengambil dan menampilkan produk dari database
-    async function fetchProducts() {
-        try {
-            const response = await fetch(`${API_URL}/products`);
-            const products = await response.json();
-            const productsContainer = document.getElementById('products');
-            productsContainer.innerHTML = '';
-
-            products.forEach(product => {
-                const productItem = document.createElement('div');
-                productItem.classList.add('product-item');
-                productItem.innerHTML = `
-                    <img src="${product.image_url}" alt="${product.name}">
-                    <h3>${product.name}</h3>
-                    <p>Harga: Rp ${product.price}</p>
-                    <button onclick="deleteProduct(${product.id})">Hapus Produk</button>
-                `;
-                productsContainer.appendChild(productItem);
-            });
-        } catch (err) {
-            console.error('Gagal mengambil produk:', err);
+  <script>
+    // Ambil data produk dari backend
+    async function loadProducts() {
+      try {
+        const response = await fetch('http://52.65.176.248:50000/products');
+        const products = await response.json();
+        
+        const container = document.getElementById('productList');
+        if (products.length === 0) {
+          container.innerHTML = '<div class="alert alert-info">Belum ada produk.</div>';
+          return;
         }
+        
+        container.innerHTML = products.map(product => `
+          <div class="col-md-4">
+            <div class="card product-card h-100">
+              <img src="${product.image_url}" class="card-img-top" style="height: 200px; object-fit: cover;">
+              <div class="card-body">
+                <h5 class="card-title">${product.name}</h5>
+                <p class="card-text text-success fw-bold">Rp${product.price.toLocaleString()}</p>
+                <small class="text-muted">Ditambahkan: ${new Date(product.created_at).toLocaleString()}</small>
+              </div>
+            </div>
+          </div>
+        `).join('');
+      } catch (error) {
+        console.error('Error:', error);
+        document.getElementById('productList').innerHTML = `
+          <div class="alert alert-danger">Gagal memuat produk. Cek koneksi backend.</div>
+        `;
+      }
     }
 
-    // Fungsi untuk mengunggah produk baru
-    async function uploadProduct() {
-        const name = document.getElementById('product-name').value;
-        const price = document.getElementById('product-price').value;
-        const file = document.getElementById('product-image').files[0];
+    // Handle form submit
+    document.getElementById('productForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const name = document.getElementById('productName').value;
+      const price = document.getElementById('productPrice').value;
+      const imageFile = document.getElementById('productImage').files[0];
+      const statusDiv = document.getElementById('formStatus');
 
-        if (!name || !price || !file) {
-            alert('Harap lengkapi semua data!');
-            return;
+      if (!name || !price || !imageFile) {
+        statusDiv.innerHTML = '<div class="alert alert-warning">Harap isi semua field!</div>';
+        return;
+      }
+
+      // Upload image ke S3 terlebih dahulu
+      const formData = new FormData();
+      formData.append('file', imageFile);
+
+      try {
+        statusDiv.innerHTML = '<div class="alert alert-info">Menyimpan produk...</div>';
+        
+        const uploadResponse = await fetch('http://52.65.176.248:50000/upload-add', {
+          method: 'POST',
+          body: formData
+        });
+
+        const uploadResult = await uploadResponse.json();
+        if (uploadResponse.ok) {
+          // Setelah berhasil upload gambar, tambah produk ke database
+          const productData = {
+            name: name,
+            price: price,
+            image_key: imageFile.name
+          };
+
+          const response = await fetch('http://52.65.176.248:50000/products-add', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(productData)
+          });
+          
+          const result = await response.json();
+          
+          if (response.ok) {
+            statusDiv.innerHTML = `
+              <div class="alert alert-success">
+                Produk berhasil disimpan!
+                <a href="${uploadResult.url}" target="_blank">Lihat Gambar</a>
+              </div>
+            `;
+            document.getElementById('productForm').reset();
+            loadProducts(); // Refresh daftar
+          } else {
+            throw new Error(result.message || 'Gagal menyimpan');
+          }
+        } else {
+          throw new Error(uploadResult.message || 'Gagal mengunggah gambar');
         }
+      } catch (error) {
+        console.error('Error:', error);
+        statusDiv.innerHTML = `
+          <div class="alert alert-danger">
+            Gagal menyimpan produk: ${error.message}
+          </div>
+        `;
+      }
+    });
 
-        const formData = new FormData();
-        formData.append('file', file);
-
-        try {
-            const uploadResponse = await fetch(`${API_URL}/upload-add`, {
-                method: 'POST',
-                body: formData
-            });
-            const uploadResult = await uploadResponse.json();
-
-            if (uploadResult.message) {
-                const newProduct = {
-                    name: name,
-                    price: price,
-                    image_key: file.name,
-                };
-
-                await fetch(`${API_URL}/products-add`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(newProduct),
-                });
-
-                alert('Produk berhasil ditambahkan');
-                fetchProducts();
-            }
-        } catch (err) {
-            console.error('Gagal mengunggah produk:', err);
-        }
-    }
-
-    // Fungsi untuk menghapus produk
-    async function deleteProduct(productId) {
-        try {
-            const deleteResponse = await fetch(`${API_URL}/products-delete/${productId}`, {
-                method: 'DELETE',
-            });
-            const deleteResult = await deleteResponse.json();
-            alert(deleteResult.message);
-            fetchProducts();
-        } catch (err) {
-            console.error('Gagal menghapus produk:', err);
-        }
-    }
-
-    // Inisialisasi halaman dengan mengambil produk saat pertama kali dimuat
-    fetchProducts();
-</script>
-
+    // Muat produk saat halaman terbuka
+    loadProducts();
+  </script>
 </body>
 </html>
