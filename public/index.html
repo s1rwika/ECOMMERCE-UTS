@@ -98,7 +98,7 @@
       if (!confirmed) return;
 
       try {
-        const response = await fetch(`http://52.65.176.248:50000/products/${productId}`, {
+        const response = await fetch(`http://52.65.176.248:50000//products-delete/${productId}`, {
           method: 'DELETE',
         });
         const result = await response.json();
