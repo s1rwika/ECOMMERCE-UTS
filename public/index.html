@@ -156,6 +156,11 @@
       
       try {
         const response = await fetch(`${API_BASE_URL}/products`);
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Error response:', errorText);
+            throw new Error('Server returned an error');
+        }
         const products = await response.json();
         
         if (products.length === 0) {
