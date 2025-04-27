@@ -1,0 +1,177 @@
+const express = require("express");
+const multer = require("multer");
+const AWS = require("aws-sdk");
+const mysql = require("mysql2/promise");
+const cors = require("cors");
+const app = express();
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+
+// Konfigurasi AWS S3 (Menggunakan IAM Role EC2)
+const s3 = new AWS.S3({ region: "ap-southeast-2" });
+const BUCKET_NAME = "storage-uts";
+
+// Konfigurasi MySQL RDS
+const dbConfig = {
+  host: process.env.RDS_HOST || "uts-ecomm.c720a2082vpd.ap-southeast-2.rds.amazonaws.com",
+  user: process.env.RDS_USER || "uts_ecomm01",
+  password: process.env.RDS_PASSWORD || "uts_ecomm01",
+  database: process.env.RDS_DATABASE || "ecommerce_db"
+};
+
+// Konfigurasi Multer
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage });
+
+// Helper function untuk koneksi database
+async function getDbConnection() {
+  return await mysql.createConnection(dbConfig);
+}
+
+app.post("/upload-add", upload.single("file"), async (req, res) => {
+    try {
+      // Pastikan file dan data lain tersedia
+      if (!req.file || !req.body.name || !req.body.price) {
+        return res.status(400).json({ error: "Nama produk, harga, atau file tidak ditemukan. Pastikan semuanya terisi!" });
+      }
+  
+      // Ambil file dan data produk dari request
+      const file = req.file;
+      const { name, price } = req.body;  // Ambil nama dan harga dari body
+  
+      // Upload file ke S3
+      const params = {
+        Bucket: BUCKET_NAME,
+        Key: file.originalname,
+        Body: file.buffer,
+        ContentType: file.mimetype,
+      };
+  
+      const result = await s3.upload(params).promise();
+      console.log("File berhasil diunggah:", result.Location);
+      
+      // Simpan informasi produk ke database
+      const connection = await getDbConnection();
+      await connection.execute(
+        "INSERT INTO products (name, price, image_key) VALUES (?, ?, ?)",
+        [name, price, file.originalname]  // Simpan name, price, dan image_key
+      );
+      connection.end();
+  
+      res.json({ message: "Produk berhasil ditambahkan!", url: result.Location });
+    } catch (err) {
+      console.error("Error saat upload:", err);
+      res.status(500).json({ error: "Gagal mengunggah file ke S3", details: err.message });
+    }
+});
+  
+  
+  
+
+// Endpoint untuk Melihat Daftar File dari S3
+app.get("/files", async (req, res) => {
+  try {
+    const params = { Bucket: BUCKET_NAME };
+    const data = await s3.listObjectsV2(params).promise();
+    
+    if (!data.Contents || data.Contents.length === 0) {
+      return res.json({ message: "Tidak ada file di bucket ini." });
+    }
+
+    const files = data.Contents.map((item) => ({
+      fileName: item.Key,
+      url: `https://${BUCKET_NAME}.s3.${s3.config.region}.amazonaws.com/${item.Key}`,
+    }));
+    
+    res.json(files);
+  } catch (err) {
+    console.error("Error saat mengambil daftar file:", err);
+    res.status(500).json({ error: "Gagal mengambil daftar file", details: err.message });
+  }
+});
+
+// Endpoint untuk Mendapatkan Produk dari MySQL RDS
+app.get("/products", async (req, res) => {
+  try {
+    const connection = await getDbConnection();
+    const [products] = await connection.query("SELECT * FROM products");
+    connection.end();
+
+    // Tambahkan URL S3 ke setiap produk
+    const productsWithUrls = await Promise.all(products.map(async (product) => {
+      const url = await s3.getSignedUrlPromise('getObject', {
+        Bucket: BUCKET_NAME,
+        Key: product.image_key,
+        Expires: 3600 // URL signed akan kedaluwarsa setelah 1 jam
+      });
+      return { ...product, image_url: url };
+    }));
+
+    res.json(productsWithUrls);
+  } catch (err) {
+    console.error("Error saat mengambil produk:", err);
+    res.status(500).json({ error: "Gagal mengambil data produk", details: err.message });
+  }
+});
+
+// Endpoint untuk Menambahkan Produk Baru
+app.post("/products-add", async (req, res) => {
+  try {
+    const { name, price, image_key } = req.body;
+    const connection = await getDbConnection();
+    const [result] = await connection.execute(
+      "INSERT INTO products (name, price, image_key) VALUES (?, ?, ?)",
+      [name, price, image_key]
+    );
+    connection.end();
+    
+    res.json({ 
+      message: "Produk berhasil ditambahkan",
+      productId: result.insertId
+    });
+  } catch (err) {
+    console.error("Error saat menambahkan produk:", err);
+    res.status(500).json({ error: "Gagal menambahkan produk", details: err.message });
+  }
+});
+
+// Endpoint untuk Menghapus Produk
+app.delete("/products-delete/:id", async (req, res) => {
+  const { id } = req.params;
+  try {
+    const connection = await getDbConnection();
+    await connection.execute("DELETE FROM products WHERE id = ?", [id]);
+    connection.end();
+    res.json({ message: `Produk dengan ID ${id} berhasil dihapus` });
+  } catch (err) {
+    console.error("Error saat menghapus produk:", err);
+    res.status(500).json({ error: "Gagal menghapus produk", details: err.message });
+  }
+});
+
+// Endpoint untuk Mengedit Produk
+app.put("/products-update/:id", async (req, res) => {
+  const { id } = req.params;
+  const { name, price, image_key } = req.body;
+  try {
+    const connection = await getDbConnection();
+    await connection.execute(
+      "UPDATE products SET name = ?, price = ?, image_key = ? WHERE id = ?",
+      [name, price, image_key, id]
+    );
+    connection.end();
+    
+    res.json({ message: `Produk dengan ID ${id} berhasil diperbarui` });
+  } catch (err) {
+    console.error("Error saat mengedit produk:", err);
+    res.status(500).json({ error: "Gagal mengedit produk", details: err.message });
+  }
+});
+
+// Menjalankan Server
+const PORT = process.env.PORT || 50000;
+app.listen(PORT, () => {
+  console.log(`Server berjalan di http://localhost:${PORT}`);
+});
