@@ -7,6 +7,7 @@
 <body>
   <h1>Daftar Produk</h1>
   <button onclick="loadProducts()">Refresh Produk</button>
+  <button onclick="addProduct()">Tambah Produk</button>
   <ul id="productList"></ul>
 
   <script>
@@ -36,6 +37,42 @@
       }
     }
 
+    async function addProduct() {
+      const name = prompt("Masukkan nama produk baru:");
+      if (name === null || name.trim() === "") return;
+
+      const price = prompt("Masukkan harga produk baru:");
+      if (price === null || price.trim() === "" || isNaN(price)) return;
+
+      const image_url = prompt("Masukkan URL gambar produk:");
+      if (image_url === null || image_url.trim() === "") return;
+
+      const newProduct = {
+        name: name.trim(),
+        price: parseInt(price),
+        image_url: image_url.trim()
+      };
+
+      try {
+        const response = await fetch(`http://52.65.176.248:50000/products-create`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newProduct)
+        });
+
+        const result = await response.json();
+        if (response.ok) {
+          alert("Produk berhasil ditambahkan!");
+          loadProducts();
+        } else {
+          alert("Gagal menambahkan produk: " + (result.error || ""));
+        }
+      } catch (error) {
+        console.error("Error saat menambahkan produk:", error);
+        alert("Gagal menambahkan produk.");
+      }
+    }
+
     async function editProduct(productId) {
       const product = products.find(p => p.id === productId);
       if (!product) {
@@ -44,14 +81,15 @@
       }
 
       const newName = prompt("Masukkan nama produk baru:", product.name);
-      if (newName === null) return; // cancel
+      if (newName === null) return;
+
       const newPrice = prompt("Masukkan harga produk baru:", product.price);
-      if (newPrice === null) return; // cancel
+      if (newPrice === null) return;
 
       const updatedProduct = {
-        name: newName,
-        price: parseInt(newPrice), // pastikan angka
-        image_key: product.image_key // jangan lupa image_key tetap dikirim
+        name: newName.trim(),
+        price: parseInt(newPrice),
+        image_key: product.image_key
       };
 
       try {
